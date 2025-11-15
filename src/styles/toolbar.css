@@ -1,0 +1,100 @@
+/**
+ * Toolbar Styles
+ */
+
+.neocad-toolbar {
+  height: var(--toolbar-height);
+  background: var(--color-surface-2);
+  border-bottom: var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  gap: var(--space-2);
+  z-index: var(--z-toolbar);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.toolbar-group:not(:last-child) {
+  border-right: var(--border);
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--easing-standard);
+  position: relative;
+}
+
+.toolbar-btn:hover {
+  background: var(--color-hover);
+}
+
+.toolbar-btn:active {
+  background: var(--color-active);
+}
+
+.toolbar-btn.active {
+  background: var(--color-selected);
+  color: var(--color-primary);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Tooltip */
+.toolbar-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-4);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  border-radius: var(--radius-base);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--easing-standard);
+  z-index: var(--z-tooltip);
+}
+
+.toolbar-btn[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+.toolbar-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 var(--space-2);
+}

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Geometry Diagnostic Test</title>
+  <style>
+    body { margin: 20px; font-family: monospace; background: #1a1a1a; color: white; }
+    .section { margin: 20px 0; padding: 10px; border: 1px solid #444; }
+    .success { color: #4CAF50; }
+    .error { color: #f44336; }
+    .warning { color: #ff9800; }
+    .info { color: #2196F3; }
+    pre { background: #2a2a2a; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Geometry Diagnostic Test</h1>
+  <p>This test will compare a working BoxGeometry CSG with wall geometry from web-ifc</p>
+
+  <div id="output"></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
+    import { ParameterEngine } from './src/parametric/ParameterEngine';
+    import { GeometryEngineWrapper } from './src/parametric/GeometryEngineWrapper';
+
+    const output = document.getElementById('output');
+    const log = (msg, type = 'info') => {
+      const div = document.createElement('div');
+      div.className = type;
+      div.innerHTML = msg;
+      output.appendChild(div);
+      console.log(msg);
+    };
+
+    function analyzeGeometry(geometry, name) {
+      const section = document.createElement('div');
+      section.className = 'section';
+
+      const info = {
+        name: name,
+        vertices: geometry.attributes.position.count,
+        indexed: geometry.index !== null,
+        indexCount: geometry.index?.count ?? 0,
+        attributes: Object.keys(geometry.attributes),
+        groups: geometry.groups.length,
+        boundingBox: geometry.boundingBox,
+        boundingSphere: geometry.boundingSphere
+      };
+
+      // Check attribute details
+      const attrDetails = {};
+      for (const [key, attr] of Object.entries(geometry.attributes)) {
+        attrDetails[key] = {
+          itemSize: attr.itemSize,
+          count: attr.count,
+          normalized: attr.normalized,
+          array: {
+            type: attr.array.constructor.name,
+            length: attr.array.length,
+            first3: Array.from(attr.array.slice(0, 9))
+          }
+        };
+      }
+
+      info.attributeDetails = attrDetails;
+
+      // Check index details
+      if (geometry.index) {
+        info.indexDetails = {
+          type: geometry.index.array.constructor.name,
+          count: geometry.index.count,
+          first10: Array.from(geometry.index.array.slice(0, 10))
+        };
+      }
+
+      section.innerHTML = `<h3>${name}</h3><pre>${JSON.stringify(info, null, 2)}</pre>`;
+      output.appendChild(section);
+
+      return info;
+    }
+
+    async function runDiagnostic() {
+      try {
+        log('<h2>Step 1: Test Working BoxGeometry CSG</h2>', 'info');
+
+        const box1 = new THREE.BoxGeometry(5, 2.7, 0.114);
+        const box2 = new THREE.BoxGeometry(0.914, 0.914, 0.2);
+
+        const info1 = analyzeGeometry(box1, 'Box 1 (Wall)');
+        const info2 = analyzeGeometry(box2, 'Box 2 (Opening)');
+
+        log('<p>Performing CSG on BoxGeometry...</p>', 'info');
+        const brush1 = new Brush(box1);
+        const brush2 = new Brush(box2);
+        const evaluator = new Evaluator();
+        const result1 = evaluator.evaluate(brush1, brush2, SUBTRACTION);
+
+        log(`<p class="success">✓ BoxGeometry CSG SUCCESS! Result: ${result1.geometry.attributes.position.count} vertices</p>`);
+
+        log('<h2>Step 2: Test web-ifc Wall Geometry CSG</h2>', 'info');
+
+        // Initialize engines
+        log('<p>Initializing GeometryEngine...</p>', 'info');
+        const paramEngine = new ParameterEngine();
+        const geomEngine = new GeometryEngineWrapper();
+        await geomEngine.initialize({ wasmPath: '/node_modules/web-ifc/' });
+
+        if (!geomEngine.isReady()) {
+          log('<p class="error">❌ GeometryEngine failed to initialize</p>');
+          return;
+        }
+
+        // Get wall geometry from web-ifc
+        log('<p>Getting wall geometry from web-ifc...</p>', 'info');
+        const wallGeometry = new THREE.BufferGeometry();
+        const wallData = {
+          start: [-2.5, 0, 0],
+          end: [2.5, 0, 0],
+          height: 2.743,
+          thickness: 0.114,
+          elevation: 0
+        };
+        geomEngine.getWall(wallGeometry, wallData);
+
+        const wallInfo = analyzeGeometry(wallGeometry, 'Wall from web-ifc');
+
+        // Create opening geometry (simple box)
+        const openingGeometry = new THREE.BoxGeometry(0.914, 0.914, 0.2);
+        // KEEP UV attribute this time to match working test
+        // openingGeometry.deleteAttribute('uv'); // Remove UV to match wall
+
+        const openingInfo = analyzeGeometry(openingGeometry, 'Opening (BoxGeometry, with UV)');
+
+        // Try CSG with wall geometry AS-IS
+        log('<p>Attempting CSG with wall geometry as-is...</p>', 'info');
+
+        // CRITICAL: Clear groups from both geometries
+        log(`<p>Wall groups BEFORE clearGroups(): ${wallGeometry.groups.length}</p>`, 'info');
+        log(`<p>Opening groups BEFORE clearGroups(): ${openingGeometry.groups.length}</p>`, 'info');
+
+        wallGeometry.clearGroups();
+        openingGeometry.clearGroups();
+
+        log(`<p>Wall groups AFTER clearGroups(): ${wallGeometry.groups.length}</p>`, 'info');
+        log(`<p>Opening groups AFTER clearGroups(): ${openingGeometry.groups.length}</p>`, 'info');
+
+        // HYPOTHESIS: three-bvh-csg might require UV attribute
+        // Add dummy UV attribute to wall geometry
+        log(`<p>Adding dummy UV attribute to wall geometry...</p>`, 'info');
+        const uvCount = wallGeometry.attributes.position.count;
+        const uvArray = new Float32Array(uvCount * 2);
+        for (let i = 0; i < uvCount * 2; i++) {
+          uvArray[i] = 0;
+        }
+        wallGeometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
+        log(`<p>Wall now has UV attribute with ${uvCount} UVs</p>`, 'info');
+
+        try {
+          const wallBrush = new Brush(wallGeometry);
+          log('<p class="success">✓ Wall brush created</p>');
+
+          const openingBrush = new Brush(openingGeometry);
+          log('<p class="success">✓ Opening brush created</p>');
+
+          const evaluator2 = new Evaluator();
+          const result2 = evaluator2.evaluate(wallBrush, openingBrush, SUBTRACTION);
+
+          log(`<p class="success">✓ web-ifc Wall CSG SUCCESS! Result: ${result2.geometry.attributes.position.count} vertices</p>`);
+        } catch (error) {
+          log(`<p class="error">✗ web-ifc Wall CSG FAILED: ${error.message}</p>`);
+          log(`<p class="error">Stack: ${error.stack}</p>`);
+
+          // Try converting to non-indexed
+          log('<h2>Step 3: Try Converting to Non-Indexed</h2>', 'info');
+
+          const wallNonIndexed = wallGeometry.toNonIndexed();
+          const openingNonIndexed = openingGeometry.toNonIndexed();
+
+          analyzeGeometry(wallNonIndexed, 'Wall (Non-Indexed)');
+          analyzeGeometry(openingNonIndexed, 'Opening (Non-Indexed)');
+
+          try {
+            const wallBrush2 = new Brush(wallNonIndexed);
+            const openingBrush2 = new Brush(openingNonIndexed);
+            const evaluator3 = new Evaluator();
+            const result3 = evaluator3.evaluate(wallBrush2, openingBrush2, SUBTRACTION);
+
+            log(`<p class="success">✓ Non-Indexed CSG SUCCESS! Result: ${result3.geometry.attributes.position.count} vertices</p>`);
+          } catch (error2) {
+            log(`<p class="error">✗ Non-Indexed CSG ALSO FAILED: ${error2.message}</p>`);
+            log(`<p class="error">Stack: ${error2.stack}</p>`);
+          }
+        }
+
+      } catch (error) {
+        log(`<p class="error">❌ Diagnostic test failed: ${error.message}</p>`);
+        log(`<p class="error">Stack: ${error.stack}</p>`);
+        console.error(error);
+      }
+    }
+
+    // Run diagnostic on load
+    runDiagnostic();
+  </script>
+</body>
+</html>

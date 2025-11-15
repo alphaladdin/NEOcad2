@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="NEOcad - The New Standard for Web-Based CAD/BIM" />
+    <title>NEOcad - Professional BIM in Your Browser</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+    <style>
+      /* Inline critical styles for loading screen */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+          'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      #app {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: #1a1a1a;
+        color: #ffffff;
+      }
+
+      #loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #1a1a1a;
+        z-index: 9999;
+      }
+
+      #loading.hidden {
+        display: none;
+      }
+
+      .logo {
+        font-size: 48px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 24px;
+      }
+
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-text {
+        margin-top: 24px;
+        font-size: 14px;
+        color: #888;
+      }
+
+      #viewer-container {
+        flex: 1;
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="neocad-app">
+      <!-- Loading Screen -->
+      <div id="loading">
+        <div class="logo">NEOcad</div>
+        <div class="spinner"></div>
+        <div class="loading-text">Loading the future of BIM...</div>
+      </div>
+
+      <!-- Main Application Layout -->
+      <div id="toolbar" class="neocad-toolbar"></div>
+
+      <div class="neocad-main">
+        <div id="sidebar-left" class="neocad-sidebar"></div>
+
+        <div class="neocad-content">
+          <div id="viewer-container"></div>
+        </div>
+
+        <div id="sidebar-right" class="neocad-sidebar"></div>
+      </div>
+
+      <div id="statusbar" class="neocad-statusbar"></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

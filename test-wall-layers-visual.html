@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wall Layers Visualization - Interactive 3D</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+    #container {
+      display: flex;
+      height: 100vh;
+    }
+    #viewer {
+      flex: 1;
+      position: relative;
+    }
+    #controls {
+      width: 320px;
+      background: #2a2a2a;
+      padding: 20px;
+      overflow-y: auto;
+      border-left: 2px solid #444;
+    }
+    h2 {
+      margin-top: 0;
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+      font-size: 18px;
+    }
+    h3 {
+      color: #66BB6A;
+      font-size: 14px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+    }
+    .control-group {
+      margin: 15px 0;
+      background: #333;
+      padding: 12px;
+      border-radius: 5px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #aaa;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    select, input[type="range"] {
+      width: 100%;
+      padding: 8px;
+      background: #444;
+      border: 1px solid #555;
+      color: white;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    input[type="range"] {
+      padding: 0;
+      height: 30px;
+    }
+    .range-value {
+      display: inline-block;
+      float: right;
+      background: #4CAF50;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .checkbox-group input {
+      width: auto;
+      margin-right: 8px;
+    }
+    .checkbox-group label {
+      margin: 0;
+      cursor: pointer;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      margin: 5px 0;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 13px;
+      width: 100%;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button.secondary {
+      background: #2196F3;
+    }
+    button.secondary:hover {
+      background: #1976D2;
+    }
+    .stats {
+      background: #1a1a2a;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+    .stat-label {
+      color: #888;
+    }
+    .stat-value {
+      color: #fff;
+      font-weight: bold;
+    }
+    .layer-preview {
+      background: #222;
+      padding: 8px;
+      margin: 5px 0;
+      border-left: 4px solid;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    .layer-name {
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+    #info-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 12px;
+      max-width: 300px;
+      border: 2px solid #4CAF50;
+    }
+    .help-text {
+      color: #888;
+      font-size: 11px;
+      font-style: italic;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="viewer">
+      <div id="info-overlay">
+        <strong style="color: #4CAF50;">Wall Layer Visualization</strong>
+        <div style="margin-top: 8px; line-height: 1.5;">
+          Use mouse to rotate (left drag), pan (right drag), and zoom (scroll).
+          <br><br>
+          Toggle "Exploded View" to see layers separated for clarity.
+        </div>
+      </div>
+    </div>
+    <div id="controls">
+      <h2>Layer Visualization Controls</h2>
+
+      <div class="control-group">
+        <label>Wall Type</label>
+        <select id="wall-type">
+          <option value="2x4-exterior-basic">2x4 Exterior Basic</option>
+          <option value="2x4-exterior-standard">2x4 Exterior Insulated</option>
+          <option value="2x6-exterior-insulated">2x6 Exterior Insulated</option>
+          <option value="2x4-interior-standard">2x4 Interior Standard</option>
+          <option value="2x6-interior-acoustic">2x6 Interior Acoustic</option>
+        </select>
+      </div>
+
+      <h3>Display Options</h3>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="exploded" checked>
+        <label for="exploded">Exploded View</label>
+      </div>
+
+      <div class="control-group">
+        <label>
+          Explosion Distance
+          <span class="range-value" id="explosion-value">5.0 cm</span>
+        </label>
+        <input type="range" id="explosion-distance" min="1" max="20" value="5" step="0.5">
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="show-labels" checked>
+        <label for="show-labels">Show Layer Labels</label>
+      </div>
+
+      <div class="control-group">
+        <label>Render Mode</label>
+        <select id="render-mode">
+          <option value="solid">Solid</option>
+          <option value="transparent">Transparent</option>
+          <option value="wireframe">Wireframe</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>
+          Opacity (Transparent Mode)
+          <span class="range-value" id="opacity-value">80%</span>
+        </label>
+        <input type="range" id="opacity" min="10" max="100" value="80" step="5">
+      </div>
+
+      <h3>Wall Statistics</h3>
+      <div id="wall-stats" class="stats"></div>
+
+      <h3>Layer Stack</h3>
+      <div id="layer-list"></div>
+
+      <button id="reset-camera" class="secondary">Reset Camera</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    import { getWallTypeManager } from './src/framing/WallTypeManager';
+    import { WallLayerRenderer } from './src/framing/WallLayerRenderer';
+
+    // Setup THREE.js scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a1a);
+
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      (window.innerWidth - 320) / window.innerHeight,
+      0.1,
+      100
+    );
+    camera.position.set(3, 2, 4);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth - 320, window.innerHeight);
+    document.getElementById('viewer').appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
+    directionalLight1.position.set(5, 10, 5);
+    scene.add(directionalLight1);
+
+    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+    directionalLight2.position.set(-5, 5, -5);
+    scene.add(directionalLight2);
+
+    // Grid
+    const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+    scene.add(gridHelper);
+
+    // Axes
+    const axesHelper = new THREE.AxesHelper(1);
+    scene.add(axesHelper);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Initialize managers
+    const wallTypeManager = getWallTypeManager();
+    const layerRenderer = new WallLayerRenderer({
+      exploded: true,
+      explosionDistance: 0.05,
+      renderMode: 'solid',
+      opacity: 0.8,
+      showLabels: true,
+    });
+
+    scene.add(layerRenderer.getGroup());
+
+    // UI State
+    let currentWallType = null;
+
+    // Check URL parameters for initial wall type
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialWallType = urlParams.get('wallType') || '2x4-exterior-basic';
+
+    function updateLayerVisualization() {
+      const wallTypeId = document.getElementById('wall-type').value;
+      const wallType = wallTypeManager.getWallType(wallTypeId);
+
+      if (!wallType) {
+        console.error('Wall type not found:', wallTypeId);
+        return;
+      }
+
+      currentWallType = wallType;
+
+      // Render layers
+      const start = new THREE.Vector3(-2, 0, 0);
+      const end = new THREE.Vector3(2, 0, 0);
+      const height = wallType.getHeightMeters();
+
+      layerRenderer.renderLayers(wallType, start, end, height);
+
+      // Update stats
+      updateWallStats(wallType);
+
+      // Update layer list
+      updateLayerList(wallType);
+    }
+
+    function updateWallStats(wallType) {
+      const stats = document.getElementById('wall-stats');
+      stats.innerHTML = `
+        <div class="stat-row">
+          <span class="stat-label">Nominal Thickness:</span>
+          <span class="stat-value">${wallType.nominalThickness}"</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Actual Thickness:</span>
+          <span class="stat-value">${wallType.actualThickness}" (${(wallType.actualThickness * 25.4).toFixed(1)}mm)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total R-Value:</span>
+          <span class="stat-value">R-${wallType.getTotalRValue().toFixed(2)}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Number of Layers:</span>
+          <span class="stat-value">${wallType.layers.length}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Load Bearing:</span>
+          <span class="stat-value">${wallType.isLoadBearing ? 'Yes' : 'No'}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Exterior:</span>
+          <span class="stat-value">${wallType.isExterior ? 'Yes' : 'No'}</span>
+        </div>
+      `;
+    }
+
+    function updateLayerList(wallType) {
+      const list = document.getElementById('layer-list');
+      let html = '';
+
+      wallType.layers.forEach((layer, index) => {
+        const color = layer.color ? `#${layer.color.getHexString()}` : '#888888';
+        html += `
+          <div class="layer-preview" style="border-left-color: ${color};">
+            <div class="layer-name">${index + 1}. ${layer.name}</div>
+            <div style="color: #aaa; font-size: 10px;">
+              ${layer.thickness}" (${(layer.thickness * 25.4).toFixed(1)}mm) • ${layer.material} • R-${layer.rValue || 0}
+            </div>
+          </div>
+        `;
+      });
+
+      list.innerHTML = html;
+    }
+
+    // Event Listeners
+    document.getElementById('wall-type').addEventListener('change', updateLayerVisualization);
+
+    document.getElementById('exploded').addEventListener('change', (e) => {
+      layerRenderer.setExploded(e.target.checked);
+      updateLayerVisualization();
+    });
+
+    document.getElementById('explosion-distance').addEventListener('input', (e) => {
+      const value = parseFloat(e.target.value);
+      document.getElementById('explosion-value').textContent = `${value.toFixed(1)} cm`;
+      layerRenderer.setExplosionDistance(value / 100); // cm to meters
+      if (document.getElementById('exploded').checked) {
+        updateLayerVisualization();
+      }
+    });
+
+    document.getElementById('show-labels').addEventListener('change', (e) => {
+      layerRenderer.setShowLabels(e.target.checked);
+    });
+
+    document.getElementById('render-mode').addEventListener('change', (e) => {
+      layerRenderer.setRenderMode(e.target.value);
+    });
+
+    document.getElementById('opacity').addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      document.getElementById('opacity-value').textContent = `${value}%`;
+      layerRenderer.setOpacity(value / 100);
+    });
+
+    document.getElementById('reset-camera').addEventListener('click', () => {
+      camera.position.set(3, 2, 4);
+      controls.target.set(0, 1, 0);
+      controls.update();
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = (window.innerWidth - 320) / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth - 320, window.innerHeight);
+    });
+
+    // Set initial wall type from URL parameter
+    const wallTypeSelect = document.getElementById('wall-type');
+    if (wallTypeManager.getWallType(initialWallType)) {
+      wallTypeSelect.value = initialWallType;
+    }
+
+    // Initial render
+    updateLayerVisualization();
+
+    // After a moment, hide the info overlay
+    setTimeout(() => {
+      const overlay = document.getElementById('info-overlay');
+      overlay.style.transition = 'opacity 1s';
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.style.display = 'none', 1000);
+    }, 5000);
+  </script>
+</body>
+</html>

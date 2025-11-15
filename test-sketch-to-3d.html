@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sketch-to-3D Wall Design - NEOcad</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+      color: #ffffff;
+      overflow: hidden;
+    }
+
+    #container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Split view: Sketch on left, 3D on right */
+    #sketch-view {
+      flex: 1;
+      position: relative;
+      border-right: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #three-view {
+      flex: 1;
+      position: relative;
+    }
+
+    #sketch-canvas {
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      background: #2a2a2a;
+    }
+
+    #three-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Header overlay */
+    .view-header {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      border-radius: 10px;
+      z-index: 10;
+    }
+
+    .view-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .view-header p {
+      font-size: 12px;
+      color: #999;
+    }
+
+    /* Control panel */
+    #control-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 280px;
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    #control-panel h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .control-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .control-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .control-section label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #ccc;
+    }
+
+    .control-section select,
+    .control-section input[type="range"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 13px;
+    }
+
+    .control-section select {
+      cursor: pointer;
+    }
+
+    .toggle-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .toggle-option label {
+      margin-bottom: 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+
+    button.danger:hover {
+      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .shortcuts {
+      font-size: 12px;
+    }
+
+    .shortcuts div {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: #999;
+    }
+
+    .shortcuts span:last-child {
+      color: #ddd;
+    }
+
+    /* Instructions overlay */
+    #instructions {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      border-radius: 10px;
+      z-index: 10;
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 400px;
+    }
+
+    #instructions h4 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #4a9eff;
+    }
+
+    /* Loading indicator */
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 30px 40px;
+      border-radius: 10px;
+      z-index: 1000;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 15px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #4a9eff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Loading Sketch Mode...</div>
+  </div>
+
+  <div id="container">
+    <!-- Sketch View (2D) -->
+    <div id="sketch-view">
+      <div class="view-header">
+        <h2>✏️ Sketch (2D)</h2>
+        <p>Draw your floor plan here</p>
+      </div>
+
+      <canvas id="sketch-canvas"></canvas>
+
+      <div id="instructions">
+        <h4>How to Use:</h4>
+        <div>1. Click to place wall start point</div>
+        <div>2. Move mouse and click to place end point</div>
+        <div>3. Continue clicking to draw connected walls</div>
+        <div>4. Press ESC to finish drawing</div>
+        <div>5. Shift + Drag to pan the view</div>
+      </div>
+    </div>
+
+    <!-- 3D View -->
+    <div id="three-view">
+      <div class="view-header">
+        <h2>🏗️ 3D View</h2>
+        <p>See your walls rendered in 3D</p>
+      </div>
+
+      <div id="three-canvas"></div>
+    </div>
+  </div>
+
+  <!-- Control Panel -->
+  <div id="control-panel">
+    <h3>Sketch-to-3D Controls</h3>
+
+    <!-- Wall Type -->
+    <div class="control-section">
+      <label>Wall Type</label>
+      <select id="wall-type">
+        <option value="2x4-exterior-basic">2x4 Exterior (Basic)</option>
+        <option value="2x4-exterior-standard">2x4 Exterior (Standard)</option>
+        <option value="2x4-interior">2x4 Interior</option>
+        <option value="2x6-exterior">2x6 Exterior</option>
+      </select>
+    </div>
+
+    <!-- Drawing Options -->
+    <div class="control-section">
+      <label>Drawing Options</label>
+      <div class="toggle-option">
+        <label>Show Grid</label>
+        <input type="checkbox" id="show-grid" checked>
+      </div>
+      <div class="toggle-option">
+        <label>Snap to Grid</label>
+        <input type="checkbox" id="snap-grid" checked>
+      </div>
+      <div class="toggle-option">
+        <label>Orthogonal Snap</label>
+        <input type="checkbox" id="ortho-snap" checked>
+      </div>
+    </div>
+
+    <!-- 3D View Options -->
+    <div class="control-section">
+      <label>3D View Options</label>
+      <div class="toggle-option">
+        <label>Show Layers</label>
+        <input type="checkbox" id="show-layers">
+      </div>
+      <div class="toggle-option">
+        <label>Exploded View</label>
+        <input type="checkbox" id="exploded-view">
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="control-section">
+      <label>Statistics</label>
+      <div class="stats">
+        <span>Walls:</span>
+        <span id="wall-count">0</span>
+      </div>
+      <div class="stats" style="margin-top: 10px;">
+        <span>Total Length:</span>
+        <span id="total-length">0'-0"</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="control-section">
+      <button id="clear-btn" class="danger">Clear All Walls</button>
+      <button id="export-btn">Export to 3D Model</button>
+    </div>
+
+    <!-- Keyboard Shortcuts -->
+    <div class="control-section">
+      <label>Keyboard Shortcuts</label>
+      <div class="shortcuts">
+        <div><span>Click</span><span>Place point</span></div>
+        <div><span>Shift + Drag</span><span>Pan view</span></div>
+        <div><span>Backspace</span><span>Undo last wall</span></div>
+        <div><span>C</span><span>Clear all</span></div>
+        <div><span>ESC</span><span>Finish drawing</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/demo/sketch-to-3d-demo.js"></script>
+</body>
+</html>

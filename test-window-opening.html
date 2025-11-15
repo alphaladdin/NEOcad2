@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Window Opening Test - NEOcad</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #viewer-container {
+      flex: 1;
+      position: relative;
+      background: #1a1a1a;
+    }
+    #test-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 300px;
+      background: #f5f5f5;
+      padding: 20px;
+      overflow-y: auto;
+      border-top: 2px solid #333;
+      z-index: 1001;
+    }
+    #output {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .warning { color: orange; }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px 0;
+      cursor: pointer;
+    }
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      z-index: 1000;
+    }
+    #loading.hidden {
+      display: none;
+    }
+    /* Hide UI panels for testing */
+    #toolbar, #properties-panel, #layer-panel, #statusbar {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading NEOcad...</div>
+
+  <!-- Required UI containers for NEOcad -->
+  <div id="toolbar"></div>
+  <div id="properties-panel"></div>
+  <div id="layer-panel"></div>
+  <div id="statusbar"></div>
+
+  <div id="viewer-container"></div>
+  <div id="test-panel">
+    <h2>Window Opening Test Panel</h2>
+    <button id="run-test">Run Window Opening Test</button>
+    <div id="output"></div>
+  </div>
+
+  <script type="module">
+    // Import the main application
+    import { createNEOcad } from './src/core/NEOcad';
+    import { logger, LogLevel } from './src/utils/Logger';
+    import { eventBus, Events } from './src/core/EventBus';
+    import * as THREE from 'three';
+
+    logger.setLogLevel(LogLevel.DEBUG);
+
+    const output = document.getElementById('output');
+    const log = (msg, type = 'info') => {
+      const div = document.createElement('div');
+      div.className = type;
+      div.textContent = msg;
+      output.appendChild(div);
+      console.log(msg);
+      // Auto-scroll to bottom
+      output.scrollTop = output.scrollHeight;
+    };
+
+    // Initialize NEOcad
+    let app = null;
+
+    async function initApp() {
+      try {
+        const container = document.getElementById('viewer-container');
+        if (!container) {
+          throw new Error('Viewer container not found');
+        }
+
+        // Create NEOcad instance
+        app = await createNEOcad({
+          container,
+          logLevel: LogLevel.DEBUG,
+          autoInit: true,
+        });
+
+        // Make globally available
+        window.neocad = app;
+        window.THREE = THREE;
+        window.logger = logger;
+
+        // Hide loading screen when ready
+        eventBus.on(Events.APP_READY, () => {
+          document.getElementById('loading').classList.add('hidden');
+          log('✓ NEOcad initialized and ready', 'success');
+        });
+
+        eventBus.on(Events.APP_ERROR, (error) => {
+          log(`❌ Application error: ${error}`, 'error');
+        });
+
+      } catch (error) {
+        log(`❌ Failed to initialize NEOcad: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    // Run the window opening test
+    async function runTest() {
+      output.innerHTML = ''; // Clear previous output
+
+      try {
+        log('=== STARTING WINDOW OPENING TEST ===', 'success');
+
+        if (!window.neocad) {
+          log('❌ NEOcad not available', 'error');
+          return;
+        }
+        log('✓ NEOcad instance found');
+
+        if (!window.THREE) {
+          log('❌ THREE.js not found', 'error');
+          return;
+        }
+        log('✓ THREE.js found');
+
+        // Import ParametricWall
+        const { ParametricWall } = await import('./src/parametric/ParametricWall.ts');
+        log('✓ ParametricWall imported');
+
+        const app = window.neocad;
+        const paramEngine = app.parameterEngine;
+        const geomEngine = app.wallCreationTool.geometryEngine;
+
+        if (!geomEngine.isReady()) {
+          log('❌ GeometryEngine not ready', 'error');
+          return;
+        }
+        log('✓ GeometryEngine ready');
+
+        // Create a test wall
+        log('\nCreating test wall (5m long, 2.7m high, 114mm thick)...');
+        const wall = new ParametricWall(paramEngine, geomEngine, {
+          startPoint: new THREE.Vector3(0, 0, 0),
+          endPoint: new THREE.Vector3(5, 0, 0),
+          height: 2743.2,   // 9 feet
+          thickness: 114.3,  // 2x4 wall
+          elevation: 0
+        });
+
+        log(`✓ Wall created: ${wall.id}`);
+        const meshBefore = wall.getMesh();
+        log(`  Vertices before opening: ${meshBefore.geometry.attributes.position.count}`);
+
+        // Add window opening
+        log('\nAdding 36"x36" window opening at center...');
+        const opening = wall.addStandardWindowOpening(0.5);
+
+        log(`\n=== OPENING DETAILS ===`);
+        log(`  Position: ${opening.position * 100}%`);
+        log(`  Width: ${opening.width}mm (${(opening.width / 25.4).toFixed(1)}")`);
+        log(`  Height: ${opening.height}mm (${(opening.height / 25.4).toFixed(1)}")`);
+        log(`  Sill Height: ${opening.sillHeight}mm`);
+        log(`  Type: ${opening.type}`);
+
+        const meshAfter = wall.getMesh();
+        log(`\n=== GEOMETRY CHECK ===`);
+        log(`  Vertices after opening: ${meshAfter.geometry.attributes.position.count}`);
+        log(`  Openings array length: ${wall.openings.length}`);
+
+        if (meshAfter.geometry.attributes.position.count === meshBefore.geometry.attributes.position.count) {
+          log('\n⚠️  WARNING: Vertex count unchanged! Boolean operation may have failed.', 'warning');
+        } else {
+          log('\n✓ Vertex count changed - boolean operation worked!', 'success');
+        }
+
+        log('\n=== TEST COMPLETE ===');
+        log('Check browser console for detailed debug logs from GeometryEngine');
+
+      } catch (error) {
+        log(`\n❌ TEST FAILED: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+
+    // Initialize app on load
+    initApp();
+
+    // Attach test runner to button
+    document.getElementById('run-test').addEventListener('click', runTest);
+
+    // Also make it globally available
+    window.runTest = runTest;
+  </script>
+</body>
+</html>

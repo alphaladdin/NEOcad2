@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wall Framing System Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      padding: 20px;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+
+    .test-section {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .test-section h2 {
+      color: #64B5F6;
+      margin-top: 0;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px 5px;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+
+    #output {
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      height: 600px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+
+    .status.running {
+      background: #FFA726;
+      color: #000;
+    }
+
+    .status.passed {
+      background: #4CAF50;
+      color: #fff;
+    }
+
+    .status.failed {
+      background: #F44336;
+      color: #fff;
+    }
+
+    .info-box {
+      background: #263238;
+      border-left: 4px solid #64B5F6;
+      padding: 15px;
+      margin: 15px 0;
+    }
+
+    .info-box h3 {
+      margin-top: 0;
+      color: #64B5F6;
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .feature-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #333;
+    }
+
+    .feature-list li:before {
+      content: '✓ ';
+      color: #4CAF50;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏗️ NEOcad Wall Framing System Test Suite</h1>
+
+    <div class="info-box">
+      <h3>System Components</h3>
+      <ul class="feature-list">
+        <li><strong>WallTypeManager</strong> - 6 standard US wall types with specifications</li>
+        <li><strong>LayerManager</strong> - 16 AIA-standard architectural layers</li>
+        <li><strong>AppearanceManager</strong> - 7 rendering styles for visualization</li>
+        <li><strong>FramingRulesEngine</strong> - 7 IRC 2021 building code rules</li>
+        <li><strong>ParametricWall</strong> - Integrated with all systems</li>
+        <li><strong>WallTypePanel</strong> - UI for wall type selection</li>
+      </ul>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Controls</h2>
+      <button id="runAllTests" onclick="runAllTests()">
+        🧪 Run All Tests
+      </button>
+      <button onclick="clearOutput()">
+        🗑️ Clear Output
+      </button>
+      <button onclick="location.href='http://localhost:3000'">
+        🚀 Open NEOcad App
+      </button>
+      <span id="status"></span>
+    </div>
+
+    <div class="test-section">
+      <h2>Individual Tests</h2>
+      <button onclick="testWallTypes()">Test Wall Types</button>
+      <button onclick="testLayers()">Test Layers</button>
+      <button onclick="testAppearance()">Test Appearance</button>
+      <button onclick="testFramingRules()">Test Framing Rules</button>
+      <button onclick="testIntegration()">Test Integration</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Test Output</h2>
+      <div id="output">Ready to run tests...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { WallTypeManager } from './src/framing/WallTypeManager.ts';
+    import { LayerManager } from './src/framing/LayerManager.ts';
+    import { AppearanceManager } from './src/framing/AppearanceManager.ts';
+    import { framingRulesEngine, detectCorners } from './src/framing/FramingRulesEngine.ts';
+    import { ParametricWall } from './src/parametric/ParametricWall.ts';
+    import { ParameterEngine } from './src/parametric/ParameterEngine.ts';
+    import { GeometryEngineWrapper } from './src/parametric/GeometryEngineWrapper.ts';
+    import * as THREE from 'three';
+
+    const output = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+
+    function log(msg, style = '') {
+      const line = document.createElement('div');
+      line.textContent = msg;
+      if (style) line.style = style;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function setStatus(text, type) {
+      statusEl.innerHTML = `<span class="status ${type}">${text}</span>`;
+    }
+
+    window.clearOutput = function() {
+      output.innerHTML = '';
+      statusEl.innerHTML = '';
+    };
+
+    window.testWallTypes = async function() {
+      log('Testing WallTypeManager...', 'color: #64B5F6; font-weight: bold;');
+
+      const manager = WallTypeManager.getInstance();
+      const types = manager.getAllWallTypes();
+
+      log(`✓ Found ${types.length} wall types`);
+      types.forEach(type => {
+        log(`  - ${type.name}: ${type.actualThickness}" thick, ${type.defaultHeight}' tall`);
+      });
+
+      const stats = manager.getStatistics();
+      log(`✓ Statistics: ${stats.totalWallTypes} total, ${stats.exteriorWalls} exterior, ${stats.interiorWalls} interior`);
+      log('');
+    };
+
+    window.testLayers = function() {
+      log('Testing LayerManager...', 'color: #64B5F6; font-weight: bold;');
+
+      const manager = LayerManager.getInstance();
+      const layers = manager.getAllLayers();
+
+      log(`✓ Found ${layers.length} layers`);
+      const wallLayers = layers.filter(l => l.name.includes('WALL'));
+      wallLayers.forEach(layer => {
+        log(`  - ${layer.name}: ${layer.description}`);
+      });
+
+      log('');
+    };
+
+    window.testAppearance = function() {
+      log('Testing AppearanceManager...', 'color: #64B5F6; font-weight: bold;');
+
+      const manager = AppearanceManager.getInstance();
+      const styles = manager.getAllStyles();
+
+      log(`✓ Found ${styles.length} appearance styles`);
+      styles.forEach(style => {
+        log(`  - ${style.name}: ${style.description}`);
+      });
+
+      log('');
+    };
+
+    window.testFramingRules = function() {
+      log('Testing FramingRulesEngine...', 'color: #64B5F6; font-weight: bold;');
+
+      const rules = framingRulesEngine.getRules();
+
+      log(`✓ Found ${rules.length} framing rules`);
+      rules.forEach(rule => {
+        log(`  - ${rule.name}: ${rule.description}`);
+      });
+
+      log('');
+    };
+
+    window.testIntegration = async function() {
+      log('Testing Integration...', 'color: #64B5F6; font-weight: bold;');
+
+      try {
+        const paramEngine = new ParameterEngine();
+        const geomEngine = GeometryEngineWrapper.getInstance();
+        await geomEngine.initialize();
+
+        const wallTypeManager = WallTypeManager.getInstance();
+        const wallType = wallTypeManager.getWallType('2x4-exterior-standard');
+
+        const wall = new ParametricWall(paramEngine, geomEngine, {
+          startPoint: new THREE.Vector3(0, 0, 0),
+          endPoint: new THREE.Vector3(5000, 0, 0),
+          wallType: wallType,
+          layerId: 'A-WALL-EXTR',
+          appearanceStyleId: 'construction'
+        });
+
+        log(`✓ Created wall with type: ${wall.getWallType()?.name}`);
+        log(`  Length: ${wall.getLength().toFixed(0)}mm`);
+        log(`  Layer: ${wall.getLayer()}`);
+        log(`  Appearance: ${wall.getAppearanceStyleId()}`);
+
+        const validation = wall.validate();
+        log(`✓ Validation: ${validation.isValid ? 'PASSED' : 'FAILED'}`);
+        if (validation.issues.length > 0) {
+          validation.issues.forEach(issue => {
+            log(`  - [${issue.severity}] ${issue.message}`);
+          });
+        }
+
+        log('');
+      } catch (error) {
+        log(`✗ Error: ${error.message}`, 'color: #F44336;');
+      }
+    };
+
+    window.runAllTests = async function() {
+      clearOutput();
+      setStatus('Running...', 'running');
+
+      log('🧪 Starting Wall Framing System Test Suite', 'color: #4CAF50; font-size: 18px; font-weight: bold;');
+      log('='.repeat(60));
+      log('');
+
+      await window.testWallTypes();
+      await window.testLayers();
+      await window.testAppearance();
+      await window.testFramingRules();
+      await window.testIntegration();
+
+      log('='.repeat(60));
+      log('🎉 All tests completed!', 'color: #4CAF50; font-size: 18px; font-weight: bold;');
+
+      setStatus('Complete', 'passed');
+    };
+
+    // Make functions globally available
+    window.WallTypeManager = WallTypeManager;
+    window.LayerManager = LayerManager;
+    window.AppearanceManager = AppearanceManager;
+    window.framingRulesEngine = framingRulesEngine;
+
+    log('Test suite loaded. Click "Run All Tests" to begin.', 'color: #4CAF50;');
+  </script>
+</body>
+</html>

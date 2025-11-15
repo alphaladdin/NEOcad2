@@ -1,0 +1,286 @@
+/**
+ * Design Mode Styles
+ * Clean, minimal interface for drawing and layout
+ */
+
+/* Design Toolbar - Narrow left sidebar */
+.design-toolbar {
+  position: fixed;
+  left: 0;
+  top: 60px; /* Below main toolbar */
+  bottom: 0;
+  width: 80px;
+  background: #1e1e1e;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.design-toolbar-header {
+  padding: 16px 12px;
+  border-bottom: 1px solid #333;
+}
+
+.design-toolbar-header h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #888;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.design-toolbar-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px;
+}
+
+.design-tool-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 70px;
+}
+
+.design-tool-button:hover {
+  background: #333;
+  border-color: #4CAF50;
+  transform: translateX(2px);
+}
+
+.design-tool-button.active {
+  background: #4CAF50;
+  border-color: #4CAF50;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.4);
+}
+
+.design-tool-button .tool-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.design-tool-button .tool-name {
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Design Toolbar Settings Section */
+.design-toolbar-settings {
+  margin-top: auto;
+  padding: 12px 8px;
+  border-top: 1px solid #333;
+}
+
+.design-setting-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.design-setting-toggle:hover {
+  background: #333;
+  border-color: #666;
+}
+
+.design-setting-toggle.active {
+  background: #2a4a2a;
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.design-setting-toggle.active:hover {
+  background: #335533;
+}
+
+.design-setting-toggle .setting-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.design-setting-toggle .setting-name {
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Mode Toggle Button */
+.mode-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 12px;
+}
+
+.mode-toggle-button:hover {
+  background: #333;
+  border-color: #4CAF50;
+}
+
+.mode-toggle-button .mode-label {
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.mode-toggle-button .mode-icon {
+  font-size: 18px;
+}
+
+/* Design Mode - Hide BIM UI elements */
+body[data-mode="design"] .left-sidebar,
+body[data-mode="design"] .right-sidebar,
+body[data-mode="design"] .properties-panel,
+body[data-mode="design"] .element-tree {
+  display: none !important;
+}
+
+body[data-mode="design"] .design-toolbar {
+  display: flex !important;
+}
+
+body[data-mode="design"] #viewport {
+  left: 80px !important; /* Account for design toolbar */
+  right: 0 !important;
+}
+
+/* BIM Mode - Hide Design UI elements */
+body[data-mode="bim"] .design-toolbar {
+  display: none !important;
+}
+
+body[data-mode="bim"] #viewport {
+  /* Restore normal viewport positioning */
+  left: 300px !important;
+  right: 300px !important;
+}
+
+/* Smooth transitions when switching modes */
+.design-toolbar,
+.left-sidebar,
+.right-sidebar,
+#viewport {
+  transition: all 0.3s ease;
+}
+
+/* Mode indicator badge */
+.mode-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #333;
+  border-radius: 20px;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.mode-indicator.design {
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.mode-indicator.bim {
+  border-color: #2196F3;
+  color: #2196F3;
+}
+
+/* Clean canvas appearance in design mode */
+body[data-mode="design"] {
+  --bg-color: #1a1a1a;
+}
+
+body[data-mode="design"] #viewport {
+  background: var(--bg-color);
+}
+
+/* Tool hints in design mode */
+.design-tool-hint {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid #4CAF50;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 14px;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.design-tool-hint.visible {
+  opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .design-toolbar {
+    width: 60px;
+  }
+
+  .design-toolbar-header h3 {
+    font-size: 10px;
+  }
+
+  .design-tool-button {
+    padding: 8px 4px;
+    min-height: 60px;
+  }
+
+  .design-tool-button .tool-icon {
+    font-size: 20px;
+  }
+
+  .design-tool-button .tool-name {
+    font-size: 9px;
+  }
+
+  body[data-mode="design"] #viewport {
+    left: 60px !important;
+  }
+}

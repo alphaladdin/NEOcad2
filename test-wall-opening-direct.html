@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Direct Wall Opening Test</title>
+  <style>
+    body { margin: 0; font-family: monospace; background: #1a1a1a; color: white; padding: 20px; }
+    #output { font-size: 12px; line-height: 1.6; }
+    .success { color: #4CAF50; }
+    .error { color: #f44336; }
+    .warning { color: #ff9800; }
+    .info { color: #2196F3; }
+  </style>
+</head>
+<body>
+  <h1>Direct Wall Opening Test</h1>
+  <div id="output"></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
+    import { ParameterEngine } from './src/parametric/ParameterEngine';
+    import { GeometryEngineWrapper } from './src/parametric/GeometryEngineWrapper';
+    import { ParametricWall } from './src/parametric/ParametricWall';
+    import { logger, LogLevel } from './src/utils/Logger';
+
+    logger.setLogLevel(LogLevel.INFO);
+
+    const output = document.getElementById('output');
+    const log = (msg, type = 'info') => {
+      const div = document.createElement('div');
+      div.className = type;
+      div.innerHTML = msg;
+      output.appendChild(div);
+      console.log(msg);
+    };
+
+    async function runTest() {
+      try {
+        log('=== DIRECT WALL OPENING TEST ===', 'success');
+        log('');
+
+        // Initialize engines
+        log('Initializing ParameterEngine...', 'info');
+        const paramEngine = new ParameterEngine();
+
+        log('Initializing GeometryEngine...', 'info');
+        const geomEngine = new GeometryEngineWrapper();
+        await geomEngine.initialize({
+          wasmPath: '/node_modules/web-ifc/'
+        });
+
+        if (!geomEngine.isReady()) {
+          log('❌ GeometryEngine failed to initialize', 'error');
+          return;
+        }
+        log('✓ GeometryEngine ready', 'success');
+        log('');
+
+        // Create a wall
+        log('Creating wall (5000mm x 2743mm x 114mm)...', 'info');
+        const wall = new ParametricWall(paramEngine, geomEngine, {
+          startPoint: new THREE.Vector3(0, 0, 0),
+          endPoint: new THREE.Vector3(5, 0, 0),
+          height: 2743,
+          thickness: 114,
+          elevation: 0
+        });
+
+        log(`✓ Wall created: ${wall.name}`, 'success');
+        const meshBefore = wall.getMesh();
+        const verticesBefore = meshBefore.geometry.attributes.position.count;
+        log(`  Vertices before opening: ${verticesBefore}`, 'info');
+        log('');
+
+        // Add opening
+        log('Adding 914mm x 914mm window opening at 50% position...', 'info');
+        const opening = wall.addOpening({
+          type: 'window',
+          position: 0.5,
+          width: 914,
+          height: 914,
+          sillHeight: 900,
+        });
+
+        log('');
+        log('=== OPENING DETAILS ===', 'info');
+        log(`  Type: ${opening.type}`, 'info');
+        log(`  Position: ${(opening.position * 100).toFixed(1)}%`, 'info');
+        log(`  Width: ${opening.width}mm`, 'info');
+        log(`  Height: ${opening.height}mm`, 'info');
+        log(`  Sill Height: ${opening.sillHeight}mm`, 'info');
+        log('');
+
+        // Check result
+        const meshAfter = wall.getMesh();
+        const verticesAfter = meshAfter.geometry.attributes.position.count;
+
+        log('=== RESULT ===', 'info');
+        log(`  Vertices before: ${verticesBefore}`, 'info');
+        log(`  Vertices after: ${verticesAfter}`, 'info');
+        log(`  Change: ${verticesAfter - verticesBefore} vertices`, 'info');
+        log('');
+
+        if (verticesAfter === verticesBefore) {
+          log('❌ FAIL: Vertex count unchanged - opening NOT applied', 'error');
+          log('Check console for detailed logs from ParametricWall', 'warning');
+        } else {
+          log('✅ SUCCESS: Vertex count changed - opening WAS applied!', 'success');
+          log(`  Geometry modified: ${verticesBefore} → ${verticesAfter} vertices`, 'success');
+        }
+
+        log('');
+        log('=== TEST COMPLETE ===', 'success');
+
+      } catch (error) {
+        log('', 'error');
+        log(`❌ TEST FAILED: ${error.message}`, 'error');
+        log(`Stack: ${error.stack}`, 'error');
+        console.error(error);
+      }
+    }
+
+    // Run test on load
+    runTest();
+  </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple CSG Test</title>
+</head>
+<body>
+  <h1>Simple three-bvh-csg Test</h1>
+  <div id="output"></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
+
+    const output = document.getElementById('output');
+
+    try {
+      output.innerHTML += '<p>Creating wall geometry (box 5x2.7x0.114m)...</p>';
+      const wallGeometry = new THREE.BoxGeometry(5, 2.7, 0.114);
+      output.innerHTML += `<p>Wall vertices: ${wallGeometry.attributes.position.count}</p>`;
+
+      output.innerHTML += '<p>Creating opening geometry (box 0.914x0.914x0.2m)...</p>';
+      const openingGeometry = new THREE.BoxGeometry(0.914, 0.914, 0.2);
+      output.innerHTML += `<p>Opening vertices: ${openingGeometry.attributes.position.count}</p>`;
+
+      output.innerHTML += '<p>Creating brushes...</p>';
+      const wallBrush = new Brush(wallGeometry);
+      const openingBrush = new Brush(openingGeometry);
+
+      output.innerHTML += '<p>Performing CSG SUBTRACTION...</p>';
+      const evaluator = new Evaluator();
+      const resultBrush = evaluator.evaluate(wallBrush, openingBrush, SUBTRACTION);
+
+      output.innerHTML += `<p style="color: green">✓ SUCCESS! Result vertices: ${resultBrush.geometry.attributes.position.count}</p>`;
+
+    } catch (error) {
+      output.innerHTML += `<p style="color: red">✗ ERROR: ${error.message}</p>`;
+      output.innerHTML += `<p style="color: red">Stack: ${error.stack}</p>`;
+      console.error(error);
+    }
+  </script>
+</body>
+</html>

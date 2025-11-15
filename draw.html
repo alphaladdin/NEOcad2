@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEOcad - CAD Drawing</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+      color: #ffffff;
+      overflow: hidden;
+    }
+
+    #container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Split view: Sketch on left, 3D on right */
+    #sketch-view {
+      flex: 1;
+      position: relative;
+      border-right: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #three-view {
+      flex: 1;
+      position: relative;
+    }
+
+    #sketch-canvas {
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      background: #2a2a2a;
+    }
+
+    #three-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Header overlay */
+    .view-header {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      border-radius: 10px;
+      z-index: 10;
+    }
+
+    .view-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .view-header p {
+      font-size: 12px;
+      color: #999;
+    }
+
+    /* Control panel */
+    #control-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 280px;
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    #control-panel.collapsed {
+      transform: translateX(calc(100% + 20px));
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #control-panel h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .control-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .control-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .control-section label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #ccc;
+    }
+
+    .control-section select,
+    .control-section input[type="range"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 13px;
+    }
+
+    .control-section select {
+      cursor: pointer;
+    }
+
+    .toggle-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .toggle-option label {
+      margin-bottom: 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+
+    button.danger:hover {
+      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .shortcuts {
+      font-size: 12px;
+    }
+
+    .shortcuts div {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: #999;
+    }
+
+    .shortcuts span:last-child {
+      color: #ddd;
+    }
+
+    /* Instructions overlay */
+    #instructions {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      border-radius: 10px;
+      z-index: 10;
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 400px;
+    }
+
+    #instructions h4 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #4a9eff;
+    }
+
+    /* Loading indicator */
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 30px 40px;
+      border-radius: 10px;
+      z-index: 1000;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 15px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #4a9eff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Floating Toolbar */
+    #toolbar {
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tool-button {
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      margin: 0;
+      position: relative;
+    }
+
+    .tool-button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(102, 126, 234, 0.5);
+      transform: scale(1.05);
+    }
+
+    .tool-button.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .tool-button .tooltip {
+      position: absolute;
+      left: 65px;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 1000;
+    }
+
+    .tool-button:hover .tooltip {
+      opacity: 1;
+    }
+
+    .toolbar-separator {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 4px 0;
+    }
+
+    /* Toggle Panel Button */
+    #toggle-panel-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 11;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #toggle-panel-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #toggle-panel-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(102, 126, 234, 0.5);
+      transform: scale(1.05);
+    }
+
+    #control-panel:not(.collapsed) ~ #toggle-panel-btn {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Room cards */
+    .room-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 12px;
+    }
+
+    .room-card:hover {
+      background: rgba(74, 158, 255, 0.1);
+      border-color: rgba(74, 158, 255, 0.5);
+    }
+
+    .room-card.selected {
+      background: rgba(74, 158, 255, 0.2);
+      border-color: #4a9eff;
+    }
+
+    .room-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .room-card-type {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 8px;
+    }
+
+    .room-card-stat {
+      display: flex;
+      justify-content: space-between;
+      margin: 3px 0;
+      font-size: 11px;
+    }
+
+    .room-card-stat-label {
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Loading Sketch Mode...</div>
+  </div>
+
+  <div id="container">
+    <!-- Sketch View (2D) -->
+    <div id="sketch-view">
+      <!-- Floating Toolbar -->
+      <div id="toolbar">
+        <button class="tool-button" data-tool="line" title="Line Tool (L)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="19" x2="19" y2="5"></line>
+          </svg>
+          <span class="tooltip">Line Tool (L)</span>
+        </button>
+
+        <button class="tool-button" data-tool="rectangle" title="Rectangle Tool (R)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+          </svg>
+          <span class="tooltip">Rectangle Tool (R)</span>
+        </button>
+
+        <button class="tool-button" data-tool="circle" title="Circle Tool (C)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="8"></circle>
+          </svg>
+          <span class="tooltip">Circle Tool (C)</span>
+        </button>
+
+        <button class="tool-button" data-tool="arc" title="Arc Tool (A)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5 A7 7 0 0 1 19 12"></path>
+          </svg>
+          <span class="tooltip">Arc Tool (A)</span>
+        </button>
+
+        <button class="tool-button" data-tool="polyline" title="Polyline Tool (P)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 8 11 12 14 16 6 20 10"></polyline>
+          </svg>
+          <span class="tooltip">Polyline Tool (P)</span>
+        </button>
+
+        <button class="tool-button" data-tool="wall-split" title="Wall Split Tool (W)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <line x1="12" y1="3" x2="12" y2="21"></line>
+          </svg>
+          <span class="tooltip">Wall Split Tool (W)</span>
+        </button>
+
+        <div class="toolbar-separator"></div>
+
+        <button class="tool-button" data-tool="dimension" title="Dimension Tool (D)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="10" x2="4" y2="14"></line>
+            <line x1="20" y1="10" x2="20" y2="14"></line>
+            <text x="12" y="9" fill="currentColor" font-size="8" text-anchor="middle">16'</text>
+          </svg>
+          <span class="tooltip">Dimension Tool (D)</span>
+        </button>
+
+        <div class="toolbar-separator"></div>
+
+        <button class="tool-button active" data-tool="select" title="Select Tool (S)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+          </svg>
+          <span class="tooltip">Select Tool (S)</span>
+        </button>
+
+        <button class="tool-button" data-tool="pan" title="Pan Tool (P)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M2 12h20"></path>
+          </svg>
+          <span class="tooltip">Pan Tool (P)</span>
+        </button>
+      </div>
+
+      <div class="view-header">
+        <h2>✏️ Sketch (2D)</h2>
+        <p>Draw your floor plan here</p>
+      </div>
+
+      <canvas id="sketch-canvas"></canvas>
+
+      <div id="instructions">
+        <h4>How to Use:</h4>
+        <div>1. Click to place wall start point</div>
+        <div>2. Move mouse and click to place end point</div>
+        <div>3. Continue clicking to draw connected walls</div>
+        <div>4. Press ESC to finish drawing</div>
+        <div>5. Shift + Drag to pan the view</div>
+      </div>
+    </div>
+
+    <!-- 3D View -->
+    <div id="three-view">
+      <div class="view-header">
+        <h2>🏗️ 3D View</h2>
+        <p>See your walls rendered in 3D</p>
+      </div>
+
+      <div id="three-canvas"></div>
+    </div>
+  </div>
+
+  <!-- Toggle Panel Button (shown when panel is collapsed) -->
+  <button id="toggle-panel-btn" title="Show Controls">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+      <line x1="9" y1="3" x2="9" y2="21"></line>
+    </svg>
+  </button>
+
+  <!-- Structural Options Panel -->
+  <div id="structural-options-panel"></div>
+
+  <!-- Control Panel -->
+  <div id="control-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Sketch-to-3D Controls</h3>
+      <button id="close-panel-btn" style="width: 30px; height: 30px; padding: 0; margin: 0; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
+    </div>
+
+    <!-- Wall Type -->
+    <div class="control-section">
+      <label>Wall Type</label>
+      <select id="wall-type">
+        <option value="2x4-exterior-basic">2x4 Exterior (Basic)</option>
+        <option value="2x4-exterior-standard">2x4 Exterior (Standard)</option>
+        <option value="2x4-interior">2x4 Interior</option>
+        <option value="2x6-exterior">2x6 Exterior</option>
+      </select>
+    </div>
+
+    <!-- Drawing Options -->
+    <div class="control-section">
+      <label>Drawing Options</label>
+      <div class="toggle-option">
+        <label>Show Grid</label>
+        <input type="checkbox" id="show-grid" checked>
+      </div>
+      <div class="toggle-option">
+        <label>Snap to Grid</label>
+        <input type="checkbox" id="snap-grid" checked>
+      </div>
+      <div class="toggle-option">
+        <label>Orthogonal Snap</label>
+        <input type="checkbox" id="ortho-snap" checked>
+      </div>
+      <div class="toggle-option">
+        <label>Auto Dimensions</label>
+        <input type="checkbox" id="auto-dimensions" checked>
+      </div>
+    </div>
+
+    <!-- 3D View Options -->
+    <div class="control-section">
+      <label>3D View Options</label>
+      <div class="toggle-option">
+        <label>Show Layers</label>
+        <input type="checkbox" id="show-layers">
+      </div>
+      <div class="toggle-option">
+        <label>Exploded View</label>
+        <input type="checkbox" id="exploded-view">
+      </div>
+    </div>
+
+    <!-- Environment Presets -->
+    <div class="control-section">
+      <label>Environment</label>
+      <select id="environment-preset">
+        <option value="default">Default (Grid)</option>
+        <option value="realistic-outdoor">Realistic Outdoor</option>
+        <option value="studio">Studio</option>
+        <option value="night">Night</option>
+      </select>
+    </div>
+
+    <!-- Room Detection -->
+    <div class="control-section">
+      <label>Room Detection</label>
+      <button id="detect-rooms-btn">Detect Rooms</button>
+      <div class="stats" style="margin-top: 10px;">
+        <span>Rooms:</span>
+        <span id="room-count">0</span>
+      </div>
+    </div>
+
+    <!-- Room Type Assignment -->
+    <div class="control-section">
+      <label>Room Type (select a room)</label>
+      <select id="room-type-select" disabled>
+        <option value="undefined">Select Room Type...</option>
+        <option value="bedroom">Bedroom</option>
+        <option value="master_bedroom">Master Bedroom</option>
+        <option value="bathroom">Bathroom</option>
+        <option value="master_bathroom">Master Bathroom</option>
+        <option value="kitchen">Kitchen</option>
+        <option value="living_room">Living Room</option>
+        <option value="dining_room">Dining Room</option>
+        <option value="family_room">Family Room</option>
+        <option value="office">Office</option>
+        <option value="laundry">Laundry</option>
+        <option value="garage">Garage</option>
+        <option value="hallway">Hallway</option>
+        <option value="closet">Closet</option>
+        <option value="pantry">Pantry</option>
+        <option value="mudroom">Mudroom</option>
+        <option value="foyer">Foyer</option>
+        <option value="utility">Utility</option>
+      </select>
+    </div>
+
+    <!-- Detected Rooms List -->
+    <div class="control-section" id="rooms-container" style="display: none;">
+      <label>Detected Rooms</label>
+      <div id="rooms-list" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="control-section">
+      <label>Statistics</label>
+      <div class="stats">
+        <span>Walls:</span>
+        <span id="wall-count">0</span>
+      </div>
+      <div class="stats" style="margin-top: 10px;">
+        <span>Total Length:</span>
+        <span id="total-length">0'-0"</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="control-section">
+      <button id="clear-btn" class="danger">Clear All Walls</button>
+      <button id="export-btn">Export to 3D Model</button>
+    </div>
+
+    <!-- Keyboard Shortcuts -->
+    <div class="control-section">
+      <label>Keyboard Shortcuts</label>
+      <div class="shortcuts">
+        <div><span>Click</span><span>Place point</span></div>
+        <div><span>Shift + Drag</span><span>Pan view</span></div>
+        <div><span>Backspace</span><span>Undo last wall</span></div>
+        <div><span>C</span><span>Clear all</span></div>
+        <div><span>ESC</span><span>Finish drawing</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/demo/sketch-to-3d-demo.js"></script>
+</body>
+</html>

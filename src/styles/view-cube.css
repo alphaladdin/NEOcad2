@@ -1,0 +1,232 @@
+/**
+ * ViewCube Widget Styles
+ * Camera view controls in viewport corner
+ */
+
+.view-cube-widget {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 500;
+  user-select: none;
+}
+
+.view-cube-widget.top-left {
+  top: 20px;
+  left: 20px;
+  right: auto;
+}
+
+.view-cube-widget.top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.view-cube-widget.bottom-left {
+  bottom: 20px;
+  top: auto;
+  left: 20px;
+  right: auto;
+}
+
+.view-cube-widget.bottom-right {
+  bottom: 20px;
+  top: auto;
+  right: 20px;
+}
+
+/* Compact button (always visible) */
+.view-cube-compact {
+  width: 48px;
+  height: 48px;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid #333;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.view-cube-compact:hover {
+  background: rgba(40, 40, 40, 0.95);
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transform: scale(1.05);
+}
+
+.view-cube-compact svg {
+  width: 24px;
+  height: 24px;
+  color: #e0e0e0;
+}
+
+/* Expanded panel */
+.view-cube-panel {
+  position: absolute;
+  top: 56px;
+  right: 0;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.view-cube-widget.top-left .view-cube-panel {
+  left: 0;
+  right: auto;
+}
+
+.view-cube-widget.bottom-right .view-cube-panel,
+.view-cube-widget.bottom-left .view-cube-panel {
+  top: auto;
+  bottom: 56px;
+}
+
+/* View buttons */
+.view-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 60px;
+}
+
+.view-button:hover {
+  background: #333;
+  border-color: #4CAF50;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.view-button:active {
+  transform: translateY(0);
+}
+
+.view-button .view-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.view-button .view-name {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Size variants */
+.view-cube-widget.small .view-cube-compact {
+  width: 40px;
+  height: 40px;
+}
+
+.view-cube-widget.small .view-cube-compact svg {
+  width: 20px;
+  height: 20px;
+}
+
+.view-cube-widget.small .view-cube-panel {
+  min-width: 160px;
+}
+
+.view-cube-widget.small .view-button {
+  padding: 10px 6px;
+  min-height: 50px;
+}
+
+.view-cube-widget.small .view-button .view-icon {
+  font-size: 18px;
+}
+
+.view-cube-widget.small .view-button .view-name {
+  font-size: 10px;
+}
+
+.view-cube-widget.large .view-cube-compact {
+  width: 56px;
+  height: 56px;
+}
+
+.view-cube-widget.large .view-cube-compact svg {
+  width: 28px;
+  height: 28px;
+}
+
+.view-cube-widget.large .view-cube-panel {
+  min-width: 200px;
+}
+
+.view-cube-widget.large .view-button {
+  padding: 14px 10px;
+  min-height: 70px;
+}
+
+.view-cube-widget.large .view-button .view-icon {
+  font-size: 24px;
+}
+
+.view-cube-widget.large .view-button .view-name {
+  font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .view-cube-widget {
+    top: 12px;
+    right: 12px;
+  }
+
+  .view-cube-widget.top-left {
+    left: 12px;
+  }
+
+  .view-cube-widget.bottom-left {
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .view-cube-widget.bottom-right {
+    bottom: 12px;
+    right: 12px;
+  }
+
+  .view-cube-compact {
+    width: 44px;
+    height: 44px;
+  }
+
+  .view-cube-panel {
+    min-width: 160px;
+  }
+
+  .view-button {
+    padding: 10px 6px;
+    min-height: 54px;
+  }
+
+  .view-button .view-icon {
+    font-size: 18px;
+  }
+
+  .view-button .view-name {
+    font-size: 10px;
+  }
+}

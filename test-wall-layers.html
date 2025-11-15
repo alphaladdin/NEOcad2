@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wall Layers Test - 2x4 Exterior Basic</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+    #container {
+      display: flex;
+      height: 100vh;
+    }
+    #viewer {
+      flex: 1;
+    }
+    #info {
+      width: 350px;
+      background: #2a2a2a;
+      padding: 20px;
+      overflow-y: auto;
+      font-size: 13px;
+      border-left: 2px solid #444;
+    }
+    h2 {
+      margin-top: 0;
+      color: #4CAF50;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .wall-info {
+      background: #333;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .layer {
+      background: #222;
+      padding: 10px;
+      margin: 8px 0;
+      border-left: 4px solid;
+      border-radius: 3px;
+    }
+    .layer-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .layer-spec {
+      font-size: 11px;
+      color: #aaa;
+      margin: 2px 0;
+    }
+    .total {
+      background: #1a3a1a;
+      padding: 10px;
+      margin: 15px 0;
+      border: 2px solid #4CAF50;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .color-swatch {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 1px solid #666;
+      margin-right: 8px;
+      vertical-align: middle;
+      border-radius: 3px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin: 10px 5px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 14px;
+      width: calc(100% - 10px);
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .specs {
+      background: #1a1a2a;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      font-size: 12px;
+    }
+    .spec-label {
+      color: #888;
+    }
+    .spec-value {
+      color: #fff;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="viewer"></div>
+    <div id="info">
+      <h2>Wall Layer Configuration</h2>
+
+      <button id="btn-basic">Load 2x4 Exterior Basic</button>
+      <button id="btn-insulated">Load 2x4 Exterior Insulated</button>
+
+      <div id="wall-details"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    import { getWallTypeManager } from './src/framing/WallTypeManager';
+    import { ParameterEngine } from './src/parametric/ParameterEngine';
+    import { GeometryEngineWrapper } from './src/parametric/GeometryEngineWrapper';
+    import { ParametricWall } from './src/parametric/ParametricWall';
+
+    // Setup THREE.js scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a1a);
+
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      (window.innerWidth - 350) / window.innerHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(3, 2, 3);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth - 350, window.innerHeight);
+    document.getElementById('viewer').appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 10, 5);
+    scene.add(directionalLight);
+
+    // Grid
+    const gridHelper = new THREE.GridHelper(10, 10);
+    scene.add(gridHelper);
+
+    // Axes
+    const axesHelper = new THREE.AxesHelper(2);
+    scene.add(axesHelper);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Initialize engines
+    const paramEngine = new ParameterEngine();
+    const geomEngine = new GeometryEngineWrapper();
+    await geomEngine.initialize({ wasmPath: '/node_modules/web-ifc/' });
+
+    const wallTypeManager = getWallTypeManager();
+    let currentWall = null;
+
+    function displayWallInfo(wallType) {
+      const details = document.getElementById('wall-details');
+
+      let html = `
+        <div class="wall-info">
+          <h3 style="margin-top:0; color: #4CAF50;">${wallType.name}</h3>
+          <p style="font-size: 12px; color: #aaa;">${wallType.description}</p>
+
+          <div class="specs">
+            <div class="spec-row">
+              <span class="spec-label">ID:</span>
+              <span class="spec-value">${wallType.id}</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">Nominal Thickness:</span>
+              <span class="spec-value">${wallType.nominalThickness}"</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">Actual Thickness:</span>
+              <span class="spec-value">${wallType.actualThickness}"</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">Default Height:</span>
+              <span class="spec-value">${wallType.defaultHeight}' (${wallType.defaultHeight * 12}")</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">Stud Size:</span>
+              <span class="spec-value">${wallType.stud.nominalSize} @ ${wallType.stud.spacing}" OC</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">Top Plate:</span>
+              <span class="spec-value">${wallType.topPlate.count > 1 ? 'Double' : 'Single'} ${wallType.topPlate.nominalSize}</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">Load Bearing:</span>
+              <span class="spec-value">${wallType.isLoadBearing ? 'Yes' : 'No'}</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">Exterior:</span>
+              <span class="spec-value">${wallType.isExterior ? 'Yes' : 'No'}</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">R-Value:</span>
+              <span class="spec-value">R-${wallType.getTotalRValue().toFixed(2)}</span>
+            </div>
+          </div>
+
+          <h4 style="color: #4CAF50; margin-top: 20px;">Layer Stack (Interior → Exterior)</h4>
+      `;
+
+      wallType.layers.forEach((layer, index) => {
+        const color = layer.color ? `#${layer.color.getHexString()}` : '#888888';
+        html += `
+          <div class="layer" style="border-left-color: ${color};">
+            <div class="layer-name">
+              <span class="color-swatch" style="background-color: ${color};"></span>
+              ${index + 1}. ${layer.name}
+            </div>
+            <div class="layer-spec">Material: ${layer.material}</div>
+            <div class="layer-spec">Thickness: ${layer.thickness}" (${(layer.thickness * 25.4).toFixed(1)}mm)</div>
+            <div class="layer-spec">R-Value: R-${layer.rValue || 0}</div>
+          </div>
+        `;
+      });
+
+      html += `
+          <div class="total">
+            Total Thickness: ${wallType.actualThickness}" (${(wallType.actualThickness * 25.4).toFixed(1)}mm)
+            <br>
+            Total R-Value: R-${wallType.getTotalRValue().toFixed(2)}
+          </div>
+        </div>
+      `;
+
+      details.innerHTML = html;
+    }
+
+    function createWall(wallTypeId) {
+      // Remove existing wall
+      if (currentWall) {
+        const mesh = currentWall.getMesh();
+        if (mesh) scene.remove(mesh);
+        currentWall.dispose();
+      }
+
+      // Get wall type
+      const wallType = wallTypeManager.getWallType(wallTypeId);
+      if (!wallType) {
+        console.error('Wall type not found:', wallTypeId);
+        return;
+      }
+
+      // Display info
+      displayWallInfo(wallType);
+
+      // Create wall
+      currentWall = new ParametricWall(paramEngine, geomEngine, {
+        startPoint: new THREE.Vector3(-2, 0, 0),
+        endPoint: new THREE.Vector3(2, 0, 0),
+        height: wallType.defaultHeight * 12 * 25.4, // feet to mm
+        thickness: wallType.actualThickness * 25.4, // inches to mm
+        wallType: wallType
+      });
+
+      // Add to scene
+      const mesh = currentWall.getMesh();
+      if (mesh) {
+        scene.add(mesh);
+        console.log('✓ Wall created:', wallType.name);
+      }
+    }
+
+    // Button handlers
+    document.getElementById('btn-basic').addEventListener('click', () => {
+      createWall('2x4-exterior-basic');
+    });
+
+    document.getElementById('btn-insulated').addEventListener('click', () => {
+      createWall('2x4-exterior-standard');
+    });
+
+    // Load basic wall by default
+    createWall('2x4-exterior-basic');
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = (window.innerWidth - 350) / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth - 350, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

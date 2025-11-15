@@ -1,0 +1,41 @@
+/**
+ * StatusBar Styles
+ */
+
+.neocad-statusbar {
+  height: var(--statusbar-height);
+  background: var(--color-surface-2);
+  border-top: var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  gap: var(--space-6);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  z-index: var(--z-toolbar);
+}
+
+.statusbar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.statusbar-label {
+  color: var(--color-text-tertiary);
+}
+
+.statusbar-value {
+  font-family: var(--font-family-mono);
+  color: var(--color-text-primary);
+}
+
+.statusbar-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border-subtle);
+}
+
+.statusbar-spacer {
+  flex: 1;
+}

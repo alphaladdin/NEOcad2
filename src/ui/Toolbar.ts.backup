@@ -1,0 +1,284 @@
+/**
+ * Toolbar - Top application toolbar with tool buttons
+ */
+
+import { logger } from '@utils/Logger';
+import { eventBus, Events } from '@core/EventBus';
+
+export interface ToolbarButton {
+  id: string;
+  label: string;
+  tooltip: string;
+  icon: string; // SVG path or HTML
+  action: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  group?: string;
+}
+
+export class Toolbar {
+  private container: HTMLElement;
+  private buttons: Map<string, ToolbarButton> = new Map();
+  private buttonElements: Map<string, HTMLButtonElement> = new Map();
+
+  constructor(containerId: string = 'toolbar') {
+    const container = document.getElementById(containerId);
+    if (!container) {
+      throw new Error(`Toolbar container #${containerId} not found`);
+    }
+    this.container = container;
+
+    logger.info('Toolbar', 'Toolbar initialized');
+  }
+
+  /**
+   * Add a button group to the toolbar
+   */
+  addGroup(groupId: string, label?: string): HTMLDivElement {
+    const group = document.createElement('div');
+    group.className = 'toolbar-group';
+    group.id = `toolbar-group-${groupId}`;
+
+    if (label) {
+      const labelEl = document.createElement('span');
+      labelEl.className = 'toolbar-label';
+      labelEl.textContent = label;
+      group.appendChild(labelEl);
+    }
+
+    this.container.appendChild(group);
+    return group;
+  }
+
+  /**
+   * Add a spacer to push subsequent items to the right
+   */
+  addSpacer(): void {
+    const spacer = document.createElement('div');
+    spacer.className = 'toolbar-spacer';
+    this.container.appendChild(spacer);
+  }
+
+  /**
+   * Add a button to the toolbar
+   */
+  addButton(button: ToolbarButton): void {
+    this.buttons.set(button.id, button);
+
+    const btnElement = document.createElement('button');
+    btnElement.className = 'toolbar-btn';
+    btnElement.id = `toolbar-btn-${button.id}`;
+    btnElement.setAttribute('data-tooltip', button.tooltip);
+    btnElement.innerHTML = button.icon;
+
+    if (button.active) {
+      btnElement.classList.add('active');
+    }
+
+    if (button.disabled) {
+      btnElement.disabled = true;
+    }
+
+    btnElement.addEventListener('click', () => {
+      button.action();
+      eventBus.emit(Events.TOOL_ACTIVATED, { toolId: button.id });
+    });
+
+    this.buttonElements.set(button.id, btnElement);
+
+    // Add to group if specified
+    if (button.group) {
+      const group = document.getElementById(`toolbar-group-${button.group}`);
+      if (group) {
+        group.appendChild(btnElement);
+      } else {
+        this.container.appendChild(btnElement);
+      }
+    } else {
+      this.container.appendChild(btnElement);
+    }
+
+    logger.debug('Toolbar', `Added button: ${button.id}`);
+  }
+
+  /**
+   * Set button active state
+   */
+  setActive(buttonId: string, active: boolean): void {
+    const btnElement = this.buttonElements.get(buttonId);
+    if (btnElement) {
+      if (active) {
+        btnElement.classList.add('active');
+      } else {
+        btnElement.classList.remove('active');
+      }
+    }
+
+    const button = this.buttons.get(buttonId);
+    if (button) {
+      button.active = active;
+    }
+  }
+
+  /**
+   * Set button disabled state
+   */
+  setDisabled(buttonId: string, disabled: boolean): void {
+    const btnElement = this.buttonElements.get(buttonId);
+    if (btnElement) {
+      btnElement.disabled = disabled;
+    }
+
+    const button = this.buttons.get(buttonId);
+    if (button) {
+      button.disabled = disabled;
+    }
+  }
+
+  /**
+   * Get button by ID
+   */
+  getButton(buttonId: string): ToolbarButton | undefined {
+    return this.buttons.get(buttonId);
+  }
+
+  /**
+   * Remove a button
+   */
+  removeButton(buttonId: string): void {
+    const btnElement = this.buttonElements.get(buttonId);
+    if (btnElement) {
+      btnElement.remove();
+      this.buttonElements.delete(buttonId);
+    }
+
+    this.buttons.delete(buttonId);
+    logger.debug('Toolbar', `Removed button: ${buttonId}`);
+  }
+
+  /**
+   * Clear all buttons
+   */
+  clear(): void {
+    this.container.innerHTML = '';
+    this.buttons.clear();
+    this.buttonElements.clear();
+    logger.debug('Toolbar', 'Toolbar cleared');
+  }
+
+  /**
+   * Dispose toolbar
+   */
+  dispose(): void {
+    this.clear();
+    logger.info('Toolbar', 'Toolbar disposed');
+  }
+}
+
+// SVG Icons Library
+export const Icons = {
+  select: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+  </svg>`,
+
+  move: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+  </svg>`,
+
+  rotate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+  </svg>`,
+
+  measure: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+    <path d="M7 12h10M12 7v10"/>
+  </svg>`,
+
+  section: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+    <line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="3 3"/>
+    <path d="M21 12l-3-3M21 12l-3 3"/>
+  </svg>`,
+
+  viewOrbit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M2 12h20"/>
+  </svg>`,
+
+  viewPlan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+  </svg>`,
+
+  cameraPresets: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="2" y="5" width="8" height="6" rx="1"/>
+    <rect x="14" y="5" width="8" height="6" rx="1"/>
+    <rect x="2" y="13" width="8" height="6" rx="1"/>
+    <rect x="14" y="13" width="8" height="6" rx="1"/>
+  </svg>`,
+
+  compare: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 12h18"/>
+    <path d="M12 3v18"/>
+    <circle cx="7" cy="7" r="2"/>
+    <circle cx="17" cy="7" r="2"/>
+    <circle cx="7" cy="17" r="2"/>
+    <circle cx="17" cy="17" r="2"/>
+  </svg>`,
+
+  annotate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 8v13"/>
+    <path d="M8 12h8"/>
+    <circle cx="12" cy="8" r="6"/>
+  </svg>`,
+
+  filter: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+  </svg>`,
+
+  layers: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+    <polyline points="2 17 12 22 22 17"/>
+    <polyline points="2 12 12 17 22 12"/>
+  </svg>`,
+
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+  </svg>`,
+
+  save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+    <polyline points="17 21 17 13 7 13 7 21"/>
+    <polyline points="7 3 7 8 15 8"/>
+  </svg>`,
+
+  open: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/>
+  </svg>`,
+
+  undo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 7v6h6"/>
+    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+  </svg>`,
+
+  redo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 7v6h-6"/>
+    <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+  </svg>`,
+
+  isolate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="3"/>
+    <circle cx="12" cy="12" r="10" stroke-dasharray="2 3"/>
+  </svg>`,
+
+  hide: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>`,
+
+  showAll: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>`,
+};
